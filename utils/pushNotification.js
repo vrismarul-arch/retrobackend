@@ -1,7 +1,7 @@
 import admin from "firebase-admin";
 import dotenv from "dotenv";
 dotenv.config();
-
+/* jkj */
 // Initialize Firebase only once
 if (!admin.apps.length) {
   admin.initializeApp({
