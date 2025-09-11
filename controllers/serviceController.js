@@ -16,13 +16,13 @@ const calculateDiscount = (originalPrice, price) => {
 const uploadToSupabase = async (file) => {
   const fileName = `${Date.now()}-${file.originalname}`;
   const { error } = await supabase.storage
-    .from("tintd")
+    .from("retrowoods")
     .upload(fileName, file.buffer, {
       contentType: file.mimetype,
       upsert: true,
     });
   if (error) throw error;
-  return `${process.env.SUPABASE_URL}/storage/v1/object/public/tintd/${fileName}`;
+  return `${process.env.SUPABASE_URL}/storage/v1/object/public/retrowoods/${fileName}`;
 };
 
 // Helper: handle nested image arrays like overview/procedureSteps

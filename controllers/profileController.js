@@ -6,13 +6,13 @@ import supabase from "../config/supabase.js";
 const uploadToSupabase = async (file) => {
   const fileName = `avatars/${Date.now()}-${file.originalname}`;
   const { error } = await supabase.storage
-    .from("tintd")
+    .from("retrowoods")
     .upload(fileName, file.buffer, {
       contentType: file.mimetype,
       upsert: true,
     });
   if (error) throw error;
-  return `${process.env.SUPABASE_URL}/storage/v1/object/public/tintd/${fileName}`;
+  return `${process.env.SUPABASE_URL}/storage/v1/object/public/retrowoods/${fileName}`;
 };
 
 // ✅ get logged-in user's profile

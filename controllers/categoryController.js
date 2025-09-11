@@ -21,7 +21,7 @@ export const createCategory = async (req, res) => {
       const fileName = `${Date.now()}-${req.file.originalname}`;
 
       const { error } = await supabase.storage
-        .from("tintd") // ✅ fixed bucket name
+        .from("retrowoods") // ✅ fixed bucket name
         .upload(fileName, req.file.buffer, {
           contentType: req.file.mimetype,
           upsert: true,
@@ -29,7 +29,7 @@ export const createCategory = async (req, res) => {
 
       if (error) throw error;
 
-      imageUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/tintd/${fileName}`;
+      imageUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/retrowoods/${fileName}`;
     }
 
     const category = new Category({
@@ -66,7 +66,7 @@ export const updateCategory = async (req, res) => {
       const fileName = `${Date.now()}-${req.file.originalname}`;
 
       const { error } = await supabase.storage
-        .from("tintd") // ✅ fixed bucket name
+        .from("retrowoods") // ✅ fixed bucket name
         .upload(fileName, req.file.buffer, {
           contentType: req.file.mimetype,
           upsert: true,
@@ -74,7 +74,7 @@ export const updateCategory = async (req, res) => {
 
       if (error) throw error;
 
-      data.imageUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/tintd/${fileName}`;
+      data.imageUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/retrowoods/${fileName}`;
     }
 
     const updated = await Category.findByIdAndUpdate(id, data, { new: true });
