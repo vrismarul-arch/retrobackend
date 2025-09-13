@@ -1,14 +1,18 @@
+// src/controllers/cartController.js
 import asyncHandler from "express-async-handler";
 import Cart from "../models/Cart.js";
-import Service from "../models/Service.js";
+import Product from "../models/Product.js";
 
+// @desc Add item to cart
+// @route POST /api/cart/add
+// @access Private
 export const addToCart = asyncHandler(async (req, res) => {
-  const { serviceId, quantity } = req.body;
+  const { productId, quantity = 1 } = req.body;
 
-  const service = await Service.findById(serviceId);
-  if (!service) {
+  const product = await Product.findById(productId);
+  if (!product) {
     res.status(404);
-    throw new Error("Service not found");
+    throw new Error("Product not found");
   }
 
   let cart = await Cart.findOne({ user: req.user._id });
@@ -16,85 +20,76 @@ export const addToCart = asyncHandler(async (req, res) => {
     cart = new Cart({ user: req.user._id, items: [] });
   }
 
-  const itemIndex = cart.items.findIndex(
-    (item) => item.service.toString() === serviceId
+  const existingItemIndex = cart.items.findIndex(
+    (item) => item.product.toString() === productId
   );
 
-  if (itemIndex > -1) {
-    cart.items[itemIndex].quantity += quantity;
+  if (existingItemIndex > -1) {
+    cart.items[existingItemIndex].quantity += quantity;
   } else {
-    cart.items.push({ service: serviceId, quantity });
+    cart.items.push({ product: productId, quantity });
   }
 
   await cart.save();
-  await cart.populate("items.service");
-
+  await cart.populate("items.product");
   res.json({ items: cart.items });
 });
 
-// @desc Get cart
+// @desc Get user cart
 // @route GET /api/cart
 // @access Private
 export const getCart = asyncHandler(async (req, res) => {
-  const cart = await Cart.findOne({ user: req.user._id }).populate(
-    "items.service"
-  );
-  if (!cart) {
-    return res.json({ items: [] });
-  }
+  const cart = await Cart.findOne({ user: req.user._id }).populate("items.product");
+  if (!cart) return res.json({ items: [] });
   res.json({ items: cart.items });
 });
 
 // @desc Remove item from cart
-// @route DELETE /api/cart/:serviceId
+// @route DELETE /api/cart/:productId
 // @access Private
 export const removeFromCart = asyncHandler(async (req, res) => {
-  const { serviceId } = req.params;
+  const { productId } = req.params;
 
   const cart = await Cart.findOne({ user: req.user._id });
   if (!cart) return res.status(404).json({ message: "Cart not found" });
 
-  cart.items = cart.items.filter(
-    (item) => item.service.toString() !== serviceId
-  );
+  cart.items = cart.items.filter((item) => item.product.toString() !== productId);
   await cart.save();
-  await cart.populate("items.service");
-
+  await cart.populate("items.product");
   res.json({ items: cart.items });
 });
 
-// @desc Update quantity
-// @route PUT /api/cart/:serviceId
+// @desc Update quantity of a cart item
+// @route PUT /api/cart/:productId
 // @access Private
 export const updateQuantity = asyncHandler(async (req, res) => {
-  const { serviceId } = req.params;
+  const { productId } = req.params;
   const { quantity } = req.body;
 
-  if (quantity <= 0)
-    return res.status(400).json({ message: "Quantity must be > 0" });
+  if (quantity <= 0) {
+    return res.status(400).json({ message: "Quantity must be greater than 0" });
+  }
 
   const cart = await Cart.findOne({ user: req.user._id });
   if (!cart) return res.status(404).json({ message: "Cart not found" });
 
-  const item = cart.items.find(
-    (i) => i.service.toString() === serviceId
-  );
-  if (!item) return res.status(404).json({ message: "Item not found" });
+  const item = cart.items.find((i) => i.product.toString() === productId);
+  if (!item) return res.status(404).json({ message: "Item not found in cart" });
 
   item.quantity = quantity;
   await cart.save();
-  await cart.populate("items.service");
-
+  await cart.populate("items.product");
   res.json({ items: cart.items });
 });
 
-
-export const clearCart = async (req, res) => {
-  try {
-    await Cart.deleteMany({ user: req.user._id }); // remove all items for the logged-in user
-    res.status(200).json({ success: true, message: "Cart cleared successfully" });
-  } catch (err) {
-    console.error("Clear cart error:", err);
-    res.status(500).json({ success: false, error: "Failed to clear cart" });
+// @desc Clear entire cart
+// @route DELETE /api/cart
+// @access Private
+export const clearCart = asyncHandler(async (req, res) => {
+  const cart = await Cart.findOne({ user: req.user._id });
+  if (cart) {
+    cart.items = [];
+    await cart.save();
   }
-};
+  res.status(200).json({ success: true, message: "Cart cleared successfully", items: [] });
+});

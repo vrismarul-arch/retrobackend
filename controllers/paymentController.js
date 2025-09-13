@@ -12,8 +12,14 @@ const razorpay = new Razorpay({
 export const createOrder = async (req, res) => {
   try {
     const {
-      name, email, phone, address, services, totalAmount,
-      userId, paymentMethod, selectedDate, selectedTime
+      name,
+      email,
+      phone,
+      address,
+      products,      // products array
+      totalAmount,
+      userId,
+      paymentMethod,
     } = req.body;
 
     // Save temporary booking
@@ -22,19 +28,18 @@ export const createOrder = async (req, res) => {
       email,
       phone,
       address,
-      services,
+      products,       // store products
       totalAmount,
-      paymentMethod,    // ✅ added
-      selectedDate,     // ✅ added
-      selectedTime,     // ✅ added
+      paymentMethod,
       status: "pending",
-      user: userId
+      user: userId,
     });
+
     await tempBooking.save();
 
     // Create Razorpay order
     const options = {
-      amount: Math.round(totalAmount * 100),
+      amount: Math.round(totalAmount * 100), // in paise
       currency: "INR",
       receipt: "receipt_" + Date.now(),
     };
@@ -47,9 +52,16 @@ export const createOrder = async (req, res) => {
       currency: order.currency,
       booking: tempBooking._id,
       status: "created",
+      user: userId,
+      bookingData: tempBooking,   // optional snapshot
     });
 
-    res.json({ orderId: order.id, amount: order.amount, currency: order.currency, bookingId: tempBooking._id });
+    res.json({
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      bookingId: tempBooking._id,
+    });
   } catch (err) {
     console.error("Create order error:", err);
     res.status(500).json({ error: err.message });
@@ -60,8 +72,11 @@ export const createOrder = async (req, res) => {
 export const verifyPayment = async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingId } = req.body;
-    const expectedSign = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`).digest("hex");
+
+    const expectedSign = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
 
     if (razorpay_signature === expectedSign) {
       const payment = await Payment.findOneAndUpdate(
@@ -93,21 +108,22 @@ export const verifyPayment = async (req, res) => {
 // ✅ Cash on Delivery
 export const createCODBooking = async (req, res) => {
   try {
-    const { name, email, phone, address, services, totalAmount, userId, selectedDate, selectedTime } = req.body;
+    const { name, email, phone, address, products, totalAmount, userId } = req.body;
+
     const booking = new Booking({
       name,
       email,
       phone,
       address,
-      services,
+      products,          // store products
       totalAmount,
       paymentMethod: "cod",
-      selectedDate,
-      selectedTime,
       status: "confirmed",
-      user: userId
+      user: userId,
     });
+
     await booking.save();
+
     res.json({ success: true, booking });
   } catch (err) {
     console.error("COD booking error:", err);

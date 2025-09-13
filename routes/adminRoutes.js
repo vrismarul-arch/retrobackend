@@ -1,6 +1,7 @@
+// routes/adminRoutes.js
 import express from "express";
 
-// Controllers for categories, subcategories, varieties, services
+// Controllers for categories, subcategories, brands, products
 import {
   createCategory,
   getCategories,
@@ -10,14 +11,14 @@ import {
 } from "../controllers/categoryController.js";
 
 import {
-  createService,
-  getServices,
-  updateService,
-  getServiceById,
-  deleteService,
-  getServicesByIds,
-  upload as serviceUpload,
-} from "../controllers/serviceController.js";
+  createProduct,
+  getProducts,
+  updateProduct,
+  getProductById,
+  deleteProduct,
+  getProductsByIds,
+  upload as productUpload,
+} from "../controllers/productController.js";
 
 import {
   createSubCategory,
@@ -28,12 +29,12 @@ import {
 } from "../controllers/subCategoryController.js";
 
 import {
-  createVariety,
-  getVarieties,
-  updateVariety,
-  deleteVariety,
-  upload as varietyUpload,
-} from "../controllers/varietyController.js";
+  createBrand,
+  getBrands,
+  updateBrand,
+  deleteBrand,
+  upload as brandUpload,
+} from "../controllers/brandController.js";
 
 // Controllers for bookings + profile
 import {
@@ -58,32 +59,24 @@ router.put("/categories/:id", categoryUpload.single("image"), updateCategory);
 router.delete("/categories/:id", deleteCategory);
 
 /* ----------------- SubCategories ----------------- */
-router.post(
-  "/subcategories",
-  subCategoryUpload.single("image"),
-  createSubCategory
-);
+router.post("/subcategories", subCategoryUpload.single("image"), createSubCategory);
 router.get("/subcategories", getSubCategories);
-router.put(
-  "/subcategories/:id",
-  subCategoryUpload.single("image"),
-  updateSubCategory
-);
+router.put("/subcategories/:id", subCategoryUpload.single("image"), updateSubCategory);
 router.delete("/subcategories/:id", deleteSubCategory);
 
-/* ----------------- Varieties ----------------- */
-router.post("/varieties", varietyUpload.single("image"), createVariety);
-router.get("/varieties", getVarieties);
-router.put("/varieties/:id", varietyUpload.single("image"), updateVariety);
-router.delete("/varieties/:id", deleteVariety);
+/* ----------------- Brands ----------------- */
+router.post("/brands", brandUpload.single("logo"), createBrand);
+router.get("/brands", getBrands);
+router.put("/brands/:id", brandUpload.single("logo"), updateBrand);
+router.delete("/brands/:id", deleteBrand);
 
-/* ----------------- Services ----------------- */
-router.post("/services/byIds", getServicesByIds);
-router.post("/services", serviceUpload.any(), createService);
-router.get("/services", getServices);
-router.get("/services/:id", getServiceById);
-router.put("/services/:id", serviceUpload.any(), updateService);
-router.delete("/services/:id", deleteService);
+/* ----------------- Products ----------------- */
+router.post("/products/byIds", getProductsByIds);
+router.post("/products", productUpload.any(), createProduct); // multiple files
+router.get("/products", getProducts);
+router.get("/products/:id", getProductById);
+router.put("/products/:id", productUpload.any(), updateProduct);
+router.delete("/products/:id", deleteProduct);
 
 /* ----------------- Bookings ----------------- */
 router.get("/bookings", getAllBookings);

@@ -1,10 +1,9 @@
-// models/Cart.js
 import mongoose from "mongoose";
 
 const cartItemSchema = new mongoose.Schema({
-  service: { 
+  product: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: "Service", 
+    ref: "Product",  // Changed to Product
     required: true 
   },
   quantity: { 

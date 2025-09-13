@@ -1,5 +1,5 @@
 import Booking from "../models/Booking.js";
-import Service from "../models/Service.js";
+import Product from "../models/Product.js"; // ✅ Product instead of Service
 import Partner from "../models/partners/Partner.js";
 import Notification from "../models/partners/Notification.js";
 import { sendPushNotification } from "../utils/pushNotification.js";
@@ -9,39 +9,44 @@ import { sendPushNotification } from "../utils/pushNotification.js";
 // =========================
 export const createBooking = async (req, res) => {
   try {
-    const { name, email, phone, address, location, services, totalAmount, selectedDate, selectedTime, paymentMethod } = req.body;
+    const { name, email, phone, address, location, products, totalAmount, paymentMethod } = req.body;
 
-    if (!name || !email || !phone || !address || !services || !selectedDate || !selectedTime || !paymentMethod)
+    if (!name || !email || !phone || !address || !products || !totalAmount || !paymentMethod) {
       return res.status(400).json({ error: "All fields are required" });
+    }
 
-    const serviceIds = services.map(s => s.serviceId);
-    const fetchedServices = await Service.find({ _id: { $in: serviceIds } });
-    if (fetchedServices.length !== services.length)
-      return res.status(400).json({ error: "Some services are invalid" });
+    const productIds = products.map(p => p.productId);
+    const fetchedProducts = await Product.find({ _id: { $in: productIds } });
+    if (fetchedProducts.length !== products.length) {
+      return res.status(400).json({ error: "Some products are invalid" });
+    }
 
     const booking = new Booking({
       user: req.user?._id || null,
-      name, email, phone, address, location,
-      services, totalAmount, selectedDate, selectedTime, paymentMethod,
+      name,
+      email,
+      phone,
+      address,
+      location,
+      products,
+      totalAmount,
+      paymentMethod,
     });
 
     await booking.save();
 
-    // Notify duty-on partners and save notifications
+    // Notify duty-on partners
     const availablePartners = await Partner.find({ dutyStatus: true });
-
     for (let partner of availablePartners) {
       const text = `New booking ${booking.bookingId || booking._id} is available`;
-      
-      // Save notification in DB
+
       const notification = new Notification({
         partner: partner._id,
         booking: booking._id,
-        text
+        text,
       });
       await notification.save();
 
-      // Send push notification if available
       if (partner.pushToken) {
         await sendPushNotification(partner.pushToken, {
           title: "New Order Available",
@@ -59,7 +64,7 @@ export const createBooking = async (req, res) => {
 };
 
 // =========================
-// Get all available bookings for partners (not picked)
+// Get all available bookings (for partners)
 // =========================
 export const getAvailableBookings = async (req, res) => {
   try {
@@ -76,14 +81,11 @@ export const getAvailableBookings = async (req, res) => {
 // =========================
 export const pickOrder = async (req, res) => {
   try {
-    const { bookingId } = req.params;
-    const partnerId = req.partner._id;
-
-    const booking = await Booking.findById(bookingId);
+    const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ error: "Booking not found" });
     if (booking.assignedTo) return res.status(400).json({ error: "Already picked by another partner" });
 
-    booking.assignedTo = partnerId;
+    booking.assignedTo = req.partner._id;
     booking.status = "picked";
     await booking.save();
 
@@ -93,8 +95,9 @@ export const pickOrder = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 // =========================
-// Get logged-in user's bookings with assigned partner details
+// Get logged-in user's bookings
 // =========================
 export const getUserBookings = async (req, res) => {
   try {
@@ -102,10 +105,11 @@ export const getUserBookings = async (req, res) => {
       $or: [
         { user: req.user._id },
         { user: null, email: req.user.email },
-      ]
+      ],
     })
-      .populate("services.serviceId", "name price imageUrl") // populate service info
-  .populate("assignedTo", "name email phone avatar");
+      .populate("products.productId", "name price imageUrl")
+      .populate("assignedTo", "name email phone avatar");
+
     res.json(bookings);
   } catch (err) {
     console.error(err);
@@ -113,14 +117,13 @@ export const getUserBookings = async (req, res) => {
   }
 };
 
-
 // =========================
 // Get all bookings (admin)
 // =========================
 export const getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
-      .populate("services.serviceId", "name price imageUrl")
+      .populate("products.productId", "name price imageUrl")
       .populate("user", "name email phone")
       .populate("assignedTo", "name email phone");
 
@@ -141,7 +144,6 @@ export const updateBooking = async (req, res) => {
     if (!booking) return res.status(404).json({ error: "Booking not found" });
 
     if (status) booking.status = status;
-
     if (assignedTo) {
       const partner = await Partner.findById(assignedTo);
       if (!partner) return res.status(400).json({ error: "Invalid partner ID" });
@@ -177,7 +179,7 @@ export const deleteBooking = async (req, res) => {
 };
 
 // =========================
-// Optional: Fix old bookings with null user
+// Fix old bookings with null user
 // =========================
 export const fixOldBookings = async (req, res) => {
   try {
@@ -192,14 +194,12 @@ export const fixOldBookings = async (req, res) => {
   }
 };
 
-
 // =========================
 // Complete a booking
 // =========================
 export const completeBooking = async (req, res) => {
   try {
-    const { id } = req.params;
-    const booking = await Booking.findById(id);
+    const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ error: "Booking not found" });
 
     if (booking.status !== "confirmed") {
@@ -211,10 +211,14 @@ export const completeBooking = async (req, res) => {
 
     res.json({ message: "Booking completed successfully", booking });
   } catch (err) {
-    console.error("Complete booking error:", err);
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
+
+// =========================
+// Confirm a booking
+// =========================
 export const confirmBooking = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
@@ -225,13 +229,15 @@ export const confirmBooking = async (req, res) => {
     await booking.save();
 
     res.json({ message: "Booking confirmed", booking });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-// Partner rejects booking
+// =========================
+// Reject a booking
+// =========================
 export const rejectBooking = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
@@ -241,21 +247,24 @@ export const rejectBooking = async (req, res) => {
     await booking.save();
 
     res.json({ message: "Booking rejected", booking });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
+// =========================
 // Get partner notifications
+// =========================
 export const getPartnerNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ partner: req.partner._id })
       .populate("booking")
       .sort({ createdAt: -1 });
+
     res.json(notifications);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 };

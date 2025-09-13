@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -15,7 +16,7 @@ import bookingRoutes from "./routes/bookingRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import serviceDrawerRoutes from "./routes/serviceDrawerRoutes.js";
 import subCategoryRoutes from "./routes/subCategoryRoutes.js";
-import varietyRoutes from "./routes/varietyRoutes.js";
+import brandRoutes from "./routes/brandRoutes.js";
 import bannerRoutes from "./routes/bannerRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import adminBookingRoutes from "./routes/admin/adminBookingRoutes.js";
@@ -25,11 +26,11 @@ import partnerRoutes from "./routes/partners/partnerRoutes.js";
 import partnerOnboardingRoutes from "./routes/partners/partnerOnboardingRoutes.js";
 import partnerBookingRoutes from "./routes/partners/partnerBookingRoutes.js";
 import partnerNotificationRoutes from "./routes/partners/partnerRoutes.js";
-import serviceRoutes from "./routes/serviceRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
 
 // Models
 import Cart from "./models/Cart.js";
-import Service from "./models/Service.js";
+import Product from "./models/Product.js";
 import Booking from "./models/Booking.js";
 import Partner from "./models/partners/Partner.js";
 
@@ -41,7 +42,7 @@ const app = express();
 // =============================
 // 🌐 CORS Configuration
 // =============================
-const allowedOrigins = ["http://localhost:5173", "https://tintd.netlify.app"];
+const allowedOrigins = ["http://localhost:5173", "https://retrowoods.netlify.app/"];
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -65,17 +66,18 @@ app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/", cartRoutes);
 app.use("/api/bookings", bookingRoutes);
-/* dsfd */
+
 // Admin routes
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin/bookings", adminBookingRoutes);
 app.use("/api/admin/service-drawers", serviceDrawerRoutes);
 app.use("/api/admin/subcategories", subCategoryRoutes);
-app.use("/api/admin/varieties", varietyRoutes);
+app.use("/api/admin/brands", brandRoutes);
 app.use("/api/admin/banners", bannerRoutes);
-app.use("/api/admin/partners", adminPartnerRoutes); // ✅ only once
+app.use("/api/admin/partners", adminPartnerRoutes);
+
 app.use("/api/payment", paymentRoutes);
-app.use("/api/services", serviceRoutes);
+app.use("/api/products", productRoutes);
 
 // Partner routes
 app.use("/api/partners", partnerRoutes);
@@ -84,7 +86,7 @@ app.use("/api/partners/bookings", partnerBookingRoutes);
 app.use("/api/partners/notifications", partnerNotificationRoutes);
 
 // Health check
-app.get("/", (_req, res) => res.send("Salon Booking API is running ✅"));
+app.get("/", (_req, res) => res.send("E-commerce API is running ✅"));
 
 // =============================
 // 🔊 Socket.IO Setup
@@ -112,23 +114,24 @@ io.on("connection", (socket) => {
 
   // CART EVENTS
   const emitCart = async (userId) => {
-    const cart = await Cart.findOne({ user: userId }).populate("items.service");
+    const cart = await Cart.findOne({ user: userId }).populate("items.product");
     emitUpdate(`user:${userId}`, "cartUpdated", cart || { user: userId, items: [] });
   };
 
   socket.on("getCart", async ({ userId }) => userId && emitCart(userId));
-  socket.on("addToCart", async ({ userId, serviceId, quantity = 1 }) => {
+  socket.on("addToCart", async ({ userId, productId, quantity = 1 }) => {
     try {
-      if (!userId || !serviceId) return;
-      const service = await Service.findById(serviceId);
-      if (!service) return emitUpdate(`user:${userId}`, "cartError", "Service not found");
+      if (!userId || !productId) return;
+      const product = await Product.findById(productId);
+      if (!product)
+        return emitUpdate(`user:${userId}`, "cartError", "Product not found");
 
       let cart = await Cart.findOne({ user: userId });
       if (!cart) cart = new Cart({ user: userId, items: [] });
 
-      const existing = cart.items.find((i) => i.service.toString() === serviceId);
+      const existing = cart.items.find((i) => i.product.toString() === productId);
       if (existing) existing.quantity += Number(quantity) || 1;
-      else cart.items.push({ service: serviceId, quantity: Number(quantity) || 1 });
+      else cart.items.push({ product: productId, quantity: Number(quantity) || 1 });
 
       await cart.save();
       await emitCart(userId);
@@ -137,13 +140,13 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("updateQuantity", async ({ userId, serviceId, quantity }) => {
+  socket.on("updateQuantity", async ({ userId, productId, quantity }) => {
     try {
-      if (!userId || !serviceId) return;
+      if (!userId || !productId) return;
       let cart = await Cart.findOne({ user: userId });
       if (!cart) return;
 
-      const item = cart.items.find((i) => i.service.toString() === serviceId);
+      const item = cart.items.find((i) => i.product.toString() === productId);
       if (item) {
         const q = parseInt(quantity, 10);
         item.quantity = Number.isNaN(q) || q < 1 ? 1 : q;
@@ -155,13 +158,13 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("removeFromCart", async ({ userId, serviceId }) => {
+  socket.on("removeFromCart", async ({ userId, productId }) => {
     try {
-      if (!userId || !serviceId) return;
+      if (!userId || !productId) return;
       let cart = await Cart.findOne({ user: userId });
       if (!cart) return;
 
-      cart.items = cart.items.filter((i) => i.service.toString() !== serviceId);
+      cart.items = cart.items.filter((i) => i.product.toString() !== productId);
       await cart.save();
       await emitCart(userId);
     } catch {
@@ -171,7 +174,7 @@ io.on("connection", (socket) => {
 
   // BOOKING EVENTS
   socket.on("newBooking", async ({ bookingId }) => {
-    const booking = await Booking.findById(bookingId).populate("user services.serviceId");
+    const booking = await Booking.findById(bookingId).populate("user products.productId");
     if (!booking) return;
 
     emitUpdate(`user:${booking.user._id}`, "bookingConfirmed", booking);
@@ -188,7 +191,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("assignBooking", async ({ bookingId, partnerId }) => {
-    const booking = await Booking.findById(bookingId).populate("services.serviceId");
+    const booking = await Booking.findById(bookingId).populate("products.productId");
     if (!booking) return;
 
     emitUpdate(`partner:${partnerId}`, "assignedBooking", booking);

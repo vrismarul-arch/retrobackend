@@ -4,27 +4,36 @@ const bookingSchema = new mongoose.Schema(
   {
     bookingId: { type: String, unique: true, trim: true }, // Auto-generated ID
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+
     name: { type: String, required: true },
     email: { type: String, required: true },
     phone: { type: String, required: true },
     address: { type: String, required: true },
     location: { lat: Number, lng: Number }, // Optional geolocation
-    services: [
+
+    // ✅ Changed serviceId → productId and ref → "Product"
+     products: [
       {
-        serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "Service" },
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
         quantity: { type: Number, default: 1 },
       },
     ],
+
     totalAmount: { type: Number, required: true },
-    selectedDate: { type: Date, required: true },
-    selectedTime: { type: Date, required: true },
+
     paymentMethod: { type: String, required: true },
+
     status: {
       type: String,
       enum: ["pending", "picked", "confirmed", "completed", "cancelled"],
       default: "pending",
     },
-    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null }, // Partner assigned
+
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Partner",
+      default: null,
+    }, // Partner assigned
   },
   { timestamps: true }
 );
@@ -42,7 +51,7 @@ bookingSchema.pre("save", async function (next) {
       if (!isNaN(lastNum)) nextId = lastNum + 1;
     }
 
-    this.bookingId = `tind-${String(nextId).padStart(3, "0")}`;
+    this.bookingId = `Retrowoods-${String(nextId).padStart(3, "0")}`;
   }
   next();
 });

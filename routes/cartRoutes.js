@@ -18,10 +18,10 @@ router.post("/cart/add", protect, addToCart);
 router.get("/cart", protect, getCart);
 
 // Update quantity
-router.put("/cart/:serviceId", protect, updateQuantity);
+router.put("/cart/:productId", protect, updateQuantity);
 
 // Remove item
-router.delete("/cart/:serviceId", protect, removeFromCart);
+router.delete("/cart/:productId", protect, removeFromCart);
 
 // ✅ Clear entire cart
 router.delete("/cart", protect, clearCart);
