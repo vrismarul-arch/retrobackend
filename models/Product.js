@@ -50,8 +50,8 @@ const productSchema = new mongoose.Schema(
     // ✅ Status
     status: {
       type: String,
-      enum: ["New Arrival", "Best Selling", "Out of Stock", "Normal"],
-      default: "Normal",
+      enum: ["New Arrival", "Best Selling", "Out of Stock"],
+      default: "New Arrival",
     },
 
     // ✅ SEO

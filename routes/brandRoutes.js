@@ -1,5 +1,5 @@
 import express from "express";
-import { createBrand, getBrands, updateBrand, deleteBrand, upload } from "../controllers/brandController.js";
+import { createBrand, getBrands, updateBrand, deleteBrand,getBrandById, upload } from "../controllers/brandController.js";
 
 const router = express.Router();
 
@@ -8,5 +8,5 @@ router.post("/", upload.single("logo"), createBrand);
 router.put("/:id", upload.single("logo"), updateBrand);
 router.get("/", getBrands);
 router.delete("/:id", deleteBrand);
-
+router.get("/:id", getBrandById); 
 export default router;

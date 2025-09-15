@@ -85,3 +85,20 @@ export const deleteBrand = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+// GET Brand by ID
+export const getBrandById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const brand = await Brand.findById(id)
+      .populate("categories", "name description logoUrl")
+      .populate("subCategories", "name description logoUrl");
+
+    if (!brand) {
+      return res.status(404).json({ message: "Brand not found" });
+    }
+
+    res.json(brand);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

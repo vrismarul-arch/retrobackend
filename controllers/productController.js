@@ -105,12 +105,25 @@ export const updateProduct = async (req, res) => {
 };
 
 // -------------------- GET ALL PRODUCTS --------------------
+// -------------------- GET ALL PRODUCTS --------------------
 export const getProducts = async (req, res) => {
   try {
-    const products = await Product.find()
+    const filter = {};
+
+    if (req.query.brand) {
+      filter.brand = req.query.brand;
+    }
+    if (req.query.subCategory) {
+      filter.subCategory = req.query.subCategory;
+    }
+    if (req.query.category) {
+      filter.category = req.query.category;
+    }
+
+    const products = await Product.find(filter)
       .populate("category", "name imageUrl")
       .populate("subCategory", "name imageUrl")
-      .populate("brand", "name");
+      .populate("brand", "name logoUrl");
 
     res.json(products);
   } catch (err) {
@@ -119,13 +132,14 @@ export const getProducts = async (req, res) => {
   }
 };
 
+
 // -------------------- GET PRODUCT BY ID --------------------
 export const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id)
       .populate("category", "name imageUrl")
       .populate("subCategory", "name imageUrl")
-      .populate("brand", "name");
+  .populate("brand", "name logo");
 
     if (!product) {
       return res.status(404).json({ error: "Product not found" });
