@@ -54,7 +54,7 @@ export const updateProfile = async (req, res) => {
 export const getUserBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({ user: req.user._id })
-      .populate("services.serviceId", "name price imageUrl")
+      .populate("products.productId", "name price imageUrl")
       .sort({ createdAt: -1 });
 
     res.json(bookings);

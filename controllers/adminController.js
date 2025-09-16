@@ -4,7 +4,7 @@ import Booking from "../models/Booking.js";
 export const getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
-      .populate("services.serviceId", "name price");
+      .populate("products.productId", "name price");
     res.json({ bookings });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -14,7 +14,7 @@ export const getBookingById = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
       .populate("user", "name email phone")
-      .populate("services.serviceId", "name price")
+      .populate("products.productId", "name price")
       // .populate("assignedTo", "name email");
 
     if (!booking) {
@@ -42,7 +42,7 @@ export const updateBooking = async (req, res) => {
     await booking.save();
 
     const updatedBooking = await Booking.findById(id)
-      .populate("services.serviceId", "name price");
+      .populate("products.productId", "name price");
 
     res.json({ message: "Booking updated", booking: updatedBooking });
   } catch (err) {

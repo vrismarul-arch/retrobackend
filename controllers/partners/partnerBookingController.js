@@ -89,7 +89,7 @@ export const getPartnerOrderHistory = async (req, res) => {
     // Fetch bookings assigned to this partner
     const bookings = await Booking.find({ assignedTo: partnerId })
       .populate("user", "name email phone")       // populate user info
-      .populate("services.serviceId", "name price"); // populate services
+      .populate("products.productId", "name price"); // populate services
 
     res.json(bookings);
   } catch (err) {

@@ -9,7 +9,7 @@ export const getPartnerNotifications = async (req, res) => {
 
     // Fetch all pending bookings (not assigned to any partner)
     const bookings = await Booking.find({ status: "pending", assignedTo: null })
-      .populate("services.serviceId", "name price imageUrl"); // populate service info
+      .populate("products.productId", "name price imageUrl"); // populate service info
 
     // Convert bookings to notifications with full details
     const notifications = bookings.map((b) => ({
