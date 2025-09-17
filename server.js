@@ -33,6 +33,7 @@ import Cart from "./models/Cart.js";
 import Product from "./models/Product.js";
 import Booking from "./models/Booking.js";
 import Partner from "./models/partners/Partner.js";
+import vendorProductRoutes from "./routes/vendorProductRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -66,7 +67,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/", cartRoutes);
 app.use("/api/bookings", bookingRoutes);
-
+app.use("/api/vendor/products", vendorProductRoutes);
 // Admin routes
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin/bookings", adminBookingRoutes);
