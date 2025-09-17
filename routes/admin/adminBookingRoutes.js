@@ -10,7 +10,6 @@ import { protect, admin } from "../../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Admin-only routes
 router.get("/", protect, admin, getAllBookings);
 router.get("/:id", protect, admin, getBookingById);
 router.put("/:id", protect, admin, updateBookingAdmin);

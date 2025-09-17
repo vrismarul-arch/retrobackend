@@ -1,4 +1,3 @@
-// src/controllers/admin/adminBookingController.js
 import mongoose from "mongoose";
 import Booking from "../../models/Booking.js";
 import Payment from "../../models/Payment.js";
@@ -14,15 +13,17 @@ export const getAllBookings = async (req, res) => {
       .populate("products.productId", "name price image images")
       .lean();
 
-    const payments = await Payment.find({ booking: { $in: bookings.map(b => b._id) } }).lean();
+    const payments = await Payment.find({
+      booking: { $in: bookings.map((b) => b._id) },
+    }).lean();
 
     const result = bookings.map((b, i) => {
-      const payment = payments.find(p => String(p.booking) === String(b._id));
+      const payment = payments.find((p) => String(p.booking) === String(b._id));
       return {
         ...b,
         bookingId: b.bookingId || `BK-${String(i + 1).padStart(4, "0")}`,
         payment: payment || null,
-        deliveryStatus: b.deliveryStatus || "pending",
+        deliveryStatus: b.deliveryStatus || "pending", // ✅ always expose deliveryStatus
       };
     });
 
@@ -32,6 +33,7 @@ export const getAllBookings = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 // =========================
 // Get single booking by ID with delivery status and partner info
 // =========================
@@ -72,13 +74,14 @@ export const updateBookingAdmin = async (req, res) => {
     const booking = await Booking.findById(id);
     if (!booking) return res.status(404).json({ error: "Booking not found" });
 
-    if (deliveryStatus !== undefined) booking.deliveryStatus = deliveryStatus;
-    if (status !== undefined) booking.status = status;
-    if (assignedTo !== undefined) booking.assignedTo = assignedTo;
+    // ✅ Apply updates safely
+    if (deliveryStatus) booking.deliveryStatus = deliveryStatus;
+    if (status) booking.status = status;
+    if (assignedTo) booking.assignedTo = assignedTo;
 
     await booking.save();
 
-    // Fetch updated booking with populated fields
+    // ✅ Return updated + populated booking
     const updatedBooking = await Booking.findById(id)
       .populate("user", "name email phone")
       .populate("assignedTo", "name email phone avatar")
@@ -87,10 +90,13 @@ export const updateBookingAdmin = async (req, res) => {
 
     res.json({
       message: "Booking updated successfully",
-      booking: updatedBooking, // ✅ include updated deliveryStatus
+      booking: {
+        ...updatedBooking,
+        deliveryStatus: updatedBooking.deliveryStatus || "pending",
+      },
     });
   } catch (err) {
-    console.error(err);
+    console.error("Error updating booking:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -102,8 +108,9 @@ export const deleteBookingAdmin = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id))
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: "Invalid booking ID" });
+    }
 
     const booking = await Booking.findById(id);
     if (!booking) return res.status(404).json({ error: "Booking not found" });

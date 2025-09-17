@@ -29,10 +29,11 @@ const bookingSchema = new mongoose.Schema(
       default: "pending",
     },
  deliveryStatus: {
-      type: String,
-      enum: ["pending", "shipping", "delivered"],
-      default: "pending",
-    },
+  type: String,
+  enum: ["pending", "shipping", "delivered"],
+  default: "pending",
+},
+
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Partner",

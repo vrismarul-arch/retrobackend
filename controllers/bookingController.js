@@ -21,8 +21,16 @@ export const createBooking = async (req, res) => {
 
     const booking = new Booking({
       user: req.user?._id || null,
-      name, email, phone, address, location, products, totalAmount, paymentMethod,
+      name,
+      email,
+      phone,
+      address,
+      location,
+      products,
+      totalAmount,
+      paymentMethod,
       deliveryStatus: "pending",
+      status: "pending"
     });
     await booking.save();
 
@@ -33,31 +41,52 @@ export const createBooking = async (req, res) => {
       const notification = new Notification({ partner: partner._id, booking: booking._id, text });
       await notification.save();
 
-      if (partner.pushToken)
-        await sendPushNotification(partner.pushToken, { title: "New Order Available", body: text, data: { bookingId: booking._id.toString() } });
+      if (partner.pushToken) {
+        await sendPushNotification(partner.pushToken, {
+          title: "New Order Available",
+          body: text,
+          data: { bookingId: booking._id.toString() },
+        });
+      }
     }
 
-    res.status(201).json({ message: "Booking successful", booking });
+    res.status(201).json({
+      message: "Booking successful",
+      booking: { ...booking.toObject(), deliveryStatus: booking.deliveryStatus || "pending" }, // ✅
+    });
   } catch (err) {
     console.error("Create booking error:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
+// =========================
 // Get logged-in user's bookings
+// =========================
 export const getUserBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ $or: [{ user: req.user._id }, { user: null, email: req.user.email }] })
+    const bookings = await Booking.find({
+      $or: [{ user: req.user._id }, { user: null, email: req.user.email }],
+    })
       .populate("products.productId", "name price image images")
-      .populate("assignedTo", "name email phone avatar");
-    res.json(bookings);
+      .populate("assignedTo", "name email phone avatar")
+      .lean();
+
+    const result = bookings.map(b => ({
+      ...b,
+      deliveryStatus: b.deliveryStatus || "pending", // ✅
+    }));
+
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
 
+// =========================
 // Get all bookings (admin)
+// =========================
 export const getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
@@ -71,10 +100,11 @@ export const getAllBookings = async (req, res) => {
 
     const bookingsWithPayment = bookings.map((b, index) => {
       const payment = payments.find(p => String(p.booking) === String(b._id));
-      return { ...b,
+      return {
+        ...b,
         bookingId: b.bookingId || `BK-${String(index + 1).padStart(4, "0")}`,
         payment: payment || null,
-        deliveryStatus: b.deliveryStatus || "pending",
+        deliveryStatus: b.deliveryStatus || "pending", // ✅
       };
     });
 
@@ -85,23 +115,29 @@ export const getAllBookings = async (req, res) => {
   }
 };
 
+// =========================
 // Get single booking by ID
+// =========================
 export const getBookingById = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
       .populate("user", "name email phone")
       .populate("assignedTo", "name email phone avatar")
-      .populate("products.productId", "name price image images");
+      .populate("products.productId", "name price image images")
+      .lean();
 
     if (!booking) return res.status(404).json({ error: "Booking not found" });
-    res.json({ booking });
+
+    res.json({ booking: { ...booking, deliveryStatus: booking.deliveryStatus || "pending" } }); // ✅
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
 
+// =========================
 // Update booking (status / assign partner / deliveryStatus)
+// =========================
 export const updateBooking = async (req, res) => {
   try {
     const { status, assignedTo, deliveryStatus } = req.body;
@@ -117,14 +153,26 @@ export const updateBooking = async (req, res) => {
     if (deliveryStatus) booking.deliveryStatus = deliveryStatus;
 
     await booking.save();
-    res.json({ message: "Booking updated successfully", booking });
+
+    const updatedBooking = await Booking.findById(req.params.id)
+      .populate("user", "name email phone")
+      .populate("assignedTo", "name email phone avatar")
+      .populate("products.productId", "name price image images")
+      .lean();
+
+    res.json({
+      message: "Booking updated successfully",
+      booking: { ...updatedBooking, deliveryStatus: updatedBooking.deliveryStatus || "pending" }, // ✅
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
 
+// =========================
 // Delete booking (user/admin)
+// =========================
 export const deleteBooking = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
@@ -140,7 +188,6 @@ export const deleteBooking = async (req, res) => {
   }
 };
 
-
 // =========================
 // Partner actions
 // =========================
@@ -152,9 +199,13 @@ export const pickOrder = async (req, res) => {
 
     booking.assignedTo = req.partner._id;
     booking.status = "picked";
+    booking.deliveryStatus = "out_for_delivery"; // ✅
     await booking.save();
 
-    res.json({ message: "Order picked successfully", booking });
+    res.json({
+      message: "Order picked successfully",
+      booking: { ...booking.toObject(), deliveryStatus: booking.deliveryStatus },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -167,10 +218,14 @@ export const confirmBooking = async (req, res) => {
     if (!booking) return res.status(404).json({ error: "Booking not found" });
 
     booking.status = "confirmed";
+    booking.deliveryStatus = "processing"; // ✅
     booking.assignedTo = req.partner._id;
     await booking.save();
 
-    res.json({ message: "Booking confirmed", booking });
+    res.json({
+      message: "Booking confirmed",
+      booking: { ...booking.toObject(), deliveryStatus: booking.deliveryStatus },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -186,9 +241,13 @@ export const completeBooking = async (req, res) => {
     }
 
     booking.status = "completed";
-    booking.deliveryStatus = "delivered"; // mark delivery as delivered
+    booking.deliveryStatus = "delivered"; // ✅
     await booking.save();
-    res.json({ message: "Booking completed successfully", booking });
+
+    res.json({
+      message: "Booking completed successfully",
+      booking: { ...booking.toObject(), deliveryStatus: booking.deliveryStatus },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -201,8 +260,13 @@ export const rejectBooking = async (req, res) => {
     if (!booking) return res.status(404).json({ error: "Booking not found" });
 
     booking.status = "rejected";
+    booking.deliveryStatus = "cancelled"; // ✅
     await booking.save();
-    res.json({ message: "Booking rejected", booking });
+
+    res.json({
+      message: "Booking rejected",
+      booking: { ...booking.toObject(), deliveryStatus: booking.deliveryStatus },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -216,9 +280,15 @@ export const getPartnerNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ partner: req.partner._id })
       .populate("booking")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    res.json(notifications);
+    const result = notifications.map(n => ({
+      ...n,
+      booking: n.booking ? { ...n.booking, deliveryStatus: n.booking.deliveryStatus || "pending" } : null, // ✅
+    }));
+
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
