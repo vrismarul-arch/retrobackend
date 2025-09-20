@@ -6,7 +6,7 @@ import {
   createCategory,
   getCategories,
   updateCategory,
-  deleteCategory,
+  deleteCategory,getCategoriesWithDetails,
   upload as categoryUpload,
 } from "../controllers/categoryController.js";
 
@@ -55,6 +55,7 @@ const router = express.Router();
 /* ----------------- Categories ----------------- */
 router.post("/categories", categoryUpload.single("image"), createCategory);
 router.get("/categories", getCategories);
+router.get("/", getCategoriesWithDetails);
 router.put("/categories/:id", categoryUpload.single("image"), updateCategory);
 router.delete("/categories/:id", deleteCategory);
 
