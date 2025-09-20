@@ -1,4 +1,4 @@
-import Category from "../models/Category.js";
+import Category from "../models/category.js";
 import SubCategory from "../models/SubCategory.js";
 import Brand from "../models/Brand.js";
 import supabase from "../config/supabase.js";
