@@ -4,23 +4,19 @@ import {
   getVendorProducts,
   upload,
   approveProduct,
-  rejectProduct,
-  updateProduct,
+  rejectProduct
 } from "../controllers/vendorProductController.js";
 
 const router = express.Router();
 
-// POST new product (up to 3 images)
-router.post("/", upload.fields([{ name: "images", maxCount: 3 }]), createVendorProduct);
+// POST multiple products (total images up to 10)
+router.post("/", upload.array("images", 10), createVendorProduct);
 
-// GET all products
+// GET all submissions
 router.get("/", getVendorProducts);
 
-// PUT Approve / Reject
+// Approve / Reject submission
 router.put("/:id/approve", approveProduct);
 router.put("/:id/reject", rejectProduct);
-
-// PUT Update product details + images
-router.put("/:id", upload.fields([{ name: "images", maxCount: 3 }]), updateProduct);
 
 export default router;
