@@ -27,13 +27,13 @@ import partnerOnboardingRoutes from "./routes/partners/partnerOnboardingRoutes.j
 import partnerBookingRoutes from "./routes/partners/partnerBookingRoutes.js";
 import partnerNotificationRoutes from "./routes/partners/partnerRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
+import vendorProductRoutes from "./routes/vendorProductRoutes.js";
 
 // Models
 import Cart from "./models/Cart.js";
 import Product from "./models/Product.js";
 import Booking from "./models/Booking.js";
 import Partner from "./models/partners/Partner.js";
-import vendorProductRoutes from "./routes/vendorProductRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -97,6 +97,9 @@ const io = new Server(httpServer, {
   cors: { origin: allowedOrigins, methods: ["GET", "POST"], credentials: true },
 });
 
+// Make io accessible in routes
+app.set("io", io);
+
 // Emit helper
 const emitUpdate = (room, event, data) => io.to(room).emit(event, data);
 
@@ -106,26 +109,40 @@ const emitUpdate = (room, event, data) => io.to(room).emit(event, data);
 io.on("connection", (socket) => {
   console.log("🟢 Socket connected:", socket.id);
 
-  // Join room
+  // Join dynamic rooms
   socket.on("joinRoom", ({ room }) => {
     if (!room) return;
     socket.join(room);
     console.log(`👤 ${socket.id} joined room: ${room}`);
   });
 
-  // CART EVENTS
+  // Admin room
+  socket.on("joinAdminRoom", () => {
+    socket.join("admin");
+    console.log(`👤 ${socket.id} joined admin room`);
+  });
+
+  // Generic emit event from client
+  socket.on("emitEvent", ({ room, event, data }) => {
+    if (!room || !event) return;
+    io.to(room).emit(event, data);
+  });
+
+  // =============================
+  // CART SOCKET EVENTS
+  // =============================
   const emitCart = async (userId) => {
     const cart = await Cart.findOne({ user: userId }).populate("items.product");
     emitUpdate(`user:${userId}`, "cartUpdated", cart || { user: userId, items: [] });
   };
 
   socket.on("getCart", async ({ userId }) => userId && emitCart(userId));
+
   socket.on("addToCart", async ({ userId, productId, quantity = 1 }) => {
     try {
       if (!userId || !productId) return;
       const product = await Product.findById(productId);
-      if (!product)
-        return emitUpdate(`user:${userId}`, "cartError", "Product not found");
+      if (!product) return emitUpdate(`user:${userId}`, "cartError", "Product not found");
 
       let cart = await Cart.findOne({ user: userId });
       if (!cart) cart = new Cart({ user: userId, items: [] });
@@ -173,7 +190,9 @@ io.on("connection", (socket) => {
     }
   });
 
-  // BOOKING EVENTS
+  // =============================
+  // BOOKING SOCKET EVENTS
+  // =============================
   socket.on("newBooking", async ({ bookingId }) => {
     const booking = await Booking.findById(bookingId).populate("user products.productId");
     if (!booking) return;
@@ -187,6 +206,7 @@ io.on("connection", (socket) => {
       text: `New booking ${booking.bookingId || booking._id} is available`,
       createdAt: booking.createdAt,
     };
+
     io.to("partners").emit("newNotification", notification);
     emitUpdate("admin", "newBooking", booking);
   });
@@ -198,7 +218,9 @@ io.on("connection", (socket) => {
     emitUpdate(`partner:${partnerId}`, "assignedBooking", booking);
   });
 
-  // PARTNER EVENTS
+  // =============================
+  // PARTNER SOCKET EVENTS
+  // =============================
   socket.on("partnerApproved", async ({ partnerId }) => {
     const partner = await Partner.findById(partnerId);
     if (!partner) return;
@@ -207,6 +229,9 @@ io.on("connection", (socket) => {
     emitUpdate("admin", "partnerApproved", partner);
   });
 
+  // =============================
+  // DISCONNECT
+  // =============================
   socket.on("disconnect", () => {
     console.log("🔴 Socket disconnected:", socket.id);
   });
