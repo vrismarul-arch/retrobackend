@@ -43,7 +43,7 @@ const app = express();
 // =============================
 // 🌐 CORS Configuration
 // =============================
-const allowedOrigins = ["http://localhost:5173", "https://retrowoods.netlify.app"];
+const allowedOrigins = ["http://localhost:5173", "https://retrowoods.netlify.app", "https://retrowoods.in"];
 app.use(
   cors({
     origin: (origin, callback) => {
