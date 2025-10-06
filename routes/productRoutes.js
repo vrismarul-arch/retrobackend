@@ -6,27 +6,24 @@ import {
   getProductById,
   deleteProduct,
   getProductsByIds,
+  addProductReview,
+  getProductReviews,
   upload as productUpload,
 } from "../controllers/productController.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ✅ Get all products
+// Product CRUD
 router.get("/", getProducts);
-
-// ✅ Get product by ID
 router.get("/:id", getProductById);
-
-// ✅ Create new product
 router.post("/", productUpload.any(), createProduct);
-
-// ✅ Update existing product
 router.put("/:id", productUpload.any(), updateProduct);
-
-// ✅ Delete product by ID
 router.delete("/:id", deleteProduct);
-
-// ✅ Get multiple products by IDs
 router.post("/byIds", getProductsByIds);
+
+// ✅ Reviews
+router.post("/:id/reviews", protect, addProductReview);
+router.get("/:id/reviews", getProductReviews);
 
 export default router;
