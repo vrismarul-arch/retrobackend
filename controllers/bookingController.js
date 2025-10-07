@@ -234,22 +234,34 @@ export const confirmBooking = async (req, res) => {
 
 export const completeBooking = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id).populate("products.productId");
     if (!booking) return res.status(404).json({ error: "Booking not found" });
+
     if (booking.status !== "confirmed") {
       return res.status(400).json({ error: "Booking must be confirmed before completing" });
     }
 
+    // ✅ Update each product's stock
+    for (const item of booking.products) {
+      const product = item.productId;
+      if (!product) continue; // product might have been deleted
+
+      const qty = item.quantity || 1;
+      const newStock = Math.max((product.stock || 0) - qty, 0); // prevent negative
+
+      await Product.findByIdAndUpdate(product._id, { $set: { stock: newStock } });
+    }
+
     booking.status = "completed";
-    booking.deliveryStatus = "delivered"; // ✅
+    booking.deliveryStatus = "delivered";
     await booking.save();
 
     res.json({
-      message: "Booking completed successfully",
+      message: "Booking completed successfully and stock updated",
       booking: { ...booking.toObject(), deliveryStatus: booking.deliveryStatus },
     });
   } catch (err) {
-    console.error(err);
+    console.error("Error completing booking:", err);
     res.status(500).json({ error: err.message });
   }
 };

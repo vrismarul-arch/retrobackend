@@ -32,8 +32,7 @@ const bookingSchema = new mongoose.Schema(
       default: "pending",
     },
 
-    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
-cancelReason: { type: String, default: "" }, // ✅ stores reason
+    cancelReason: { type: String, default: "" }, // ✅ stores reason
   },
   { timestamps: true }
 );
