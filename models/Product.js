@@ -28,8 +28,8 @@ const reviewSchema = new mongoose.Schema(
 const productSchema = new mongoose.Schema(
   {
     // ✅ Basic Info
-    name: { type: String, required: true, trim: true },
-    slug: { type: String, unique: true, lowercase: true, trim: true },
+    name: { type: String, required: true },
+    slug: { type: String },
     description: { type: String, trim: true },
     image: { type: String, trim: true },
     images: [{ type: String, trim: true }],
@@ -51,7 +51,7 @@ const productSchema = new mongoose.Schema(
 
     // ✅ Stock
     stock: { type: Number, default: 0 },
-    sku: { type: String, unique: true, trim: true },
+    sku: { type: String},
 
     // ✅ Reviews & Ratings
     rating: { type: Number, default: 0 },
@@ -59,9 +59,9 @@ const productSchema = new mongoose.Schema(
 
     // ✅ More Info
     moreInformation: {
-      dimensions: { type: String, trim: true },
-      warranty: { type: String, trim: true },
-      material: { type: String, trim: true },
+      dimensions: { type: String, trim: false },
+      warranty: { type: String, trim: false },
+      material: { type: String, trim: false },
     },
 
     // ✅ Status
