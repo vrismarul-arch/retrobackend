@@ -7,6 +7,24 @@ const generateToken = (id) =>
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+// Helper to check if email/password matches any admin
+const checkAdminLogin = (email, password) => {
+  if (
+    (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) ||
+    (email === process.env["2ADMIN_EMAIL"] && password === process.env["2ADMIN_PASSWORD"])
+  ) {
+    return true;
+  }
+  return false;
+};
+
+// Helper to get admin name
+const getAdminName = (email) => {
+  if (email === process.env.ADMIN_EMAIL) return "Admin";
+  if (email === process.env["2ADMIN_EMAIL"]) return "Admin 2";
+  return "Admin";
+};
+
 // =============================
 // Register user
 // =============================
@@ -16,7 +34,11 @@ export const registerUser = async (req, res) => {
     const exists = await User.findOne({ email });
     if (exists) return res.status(400).json({ error: "User already exists" });
 
-    const role = email === process.env.ADMIN_EMAIL ? "admin" : "user";
+    const role =
+      email === process.env.ADMIN_EMAIL || email === process.env["2ADMIN_EMAIL"]
+        ? "admin"
+        : "user";
+
     const user = new User({ name, email, password, role });
     await user.save();
 
@@ -42,17 +64,13 @@ export const loginUser = async (req, res) => {
     let user = await User.findOne({ email });
 
     // 🔹 Admin login from .env
-    if (!user && email === process.env.ADMIN_EMAIL) {
-      if (password === process.env.ADMIN_PASSWORD) {
-        user = await User.create({
-          name: "Admin",
-          email,
-          password, // hashed automatically
-          role: "admin",
-        });
-      } else {
-        return res.status(401).json({ error: "Invalid email or password" });
-      }
+    if (!user && checkAdminLogin(email, password)) {
+      user = await User.create({
+        name: getAdminName(email),
+        email,
+        password,
+        role: "admin",
+      });
     }
 
     if (!user) return res.status(401).json({ error: "Invalid email or password" });
@@ -88,7 +106,10 @@ export const googleLogin = async (req, res) => {
 
     let user = await User.findOne({ email });
     if (!user) {
-      const role = email === process.env.ADMIN_EMAIL ? "admin" : "user";
+      const role =
+        email === process.env.ADMIN_EMAIL || email === process.env["2ADMIN_EMAIL"]
+          ? "admin"
+          : "user";
       user = await User.create({
         name,
         email,
