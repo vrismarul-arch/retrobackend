@@ -17,6 +17,7 @@ const bookingSchema = new mongoose.Schema(
         quantity: { type: Number, default: 1 },
       },
     ],
+  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null }, // ✅ add this
 
     totalAmount: { type: Number, required: true },
     paymentMethod: { type: String, required: true },
@@ -28,7 +29,7 @@ const bookingSchema = new mongoose.Schema(
     },
     deliveryStatus: {
       type: String,
-      enum: ["pending", "shipping", "delivered", "cancelled"], // ✅ fixed
+      enum: ["pending", "processing", "shipping", "delivered", "cancelled"], // ✅ fixed
       default: "pending",
     },
 
